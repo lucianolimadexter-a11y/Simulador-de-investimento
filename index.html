@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Radar Cripto · Simulador</title>
+<meta name="theme-color" content="#0A0B0D">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0D;
+    --panel:#111317;
+    --panel-2:#15181D;
+    --line:#23262C;
+    --text:#E4E4E2;
+    --muted:#7A7F87;
+    --up:#3DDC84;
+    --up-dim:#1C4A34;
+    --down:#FF5470;
+    --down-dim:#4A1C29;
+    --amber:#E8A33D;
+    --amber-dim:#4A3A1C;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  body{
+    padding-bottom:40px;
+  }
+
+  /* --- ticker tape header --- */
+  .tape-wrap{
+    overflow:hidden;
+    background:var(--panel-2);
+    border-bottom:1px solid var(--line);
+    white-space:nowrap;
+    position:sticky;
+    top:0;
+    z-index:10;
+  }
+  .tape{
+    display:inline-flex;
+    animation:scroll 38s linear infinite;
+    padding:8px 0;
+  }
+  .tape span{
+    padding:0 18px;
+    font-size:12px;
+    letter-spacing:.02em;
+    color:var(--muted);
+    border-right:1px solid var(--line);
+  }
+  .tape span b{color:var(--text); font-weight:600;}
+  .tape .u{color:var(--up);}
+  .tape .d{color:var(--down);}
+  @keyframes scroll{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-50%);}
+  }
+
+  header.hero{
+    padding:28px 20px 18px;
+    border-bottom:1px solid var(--line);
+  }
+  header.hero .eyebrow{
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin-bottom:8px;
+  }
+  header.hero h1{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800;
+    font-size:34px;
+    letter-spacing:.01em;
+    line-height:1;
+    text-transform:uppercase;
+  }
+  header.hero p.sub{
+    color:var(--muted);
+    font-size:12.5px;
+    margin-top:10px;
+    line-height:1.5;
+    max-width:520px;
+  }
+  header.hero .status{
+    margin-top:14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:11px;
+    color:var(--muted);
+  }
+  .dot{
+    width:7px;height:7px;border-radius:50%;
+    background:var(--up);
+    box-shadow:0 0 0 0 rgba(61,220,132,.6);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(61,220,132,.5);}
+    70%{box-shadow:0 0 0 6px rgba(61,220,132,0);}
+    100%{box-shadow:0 0 0 0 rgba(61,220,132,0);}
+  }
+
+  main{
+    max-width:760px;
+    margin:0 auto;
+    padding:14px 14px 0;
+  }
+
+  .board{
+    display:flex;
+    flex-direction:column;
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    margin-top:14px;
+  }
+
+  .col-heads{
+    display:grid;
+    grid-template-columns: 1.6fr .9fr 1fr .8fr 1.3fr;
+    padding:10px 14px;
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    background:var(--panel-2);
+    border-bottom:1px solid var(--line);
+  }
+  .col-heads span:nth-child(2),
+  .col-heads span:nth-child(3){text-align:right;}
+  .col-heads span:nth-child(4){text-align:center;}
+
+  .row{
+    display:grid;
+    grid-template-columns: 1.6fr .9fr 1fr .8fr 1.3fr;
+    align-items:center;
+    padding:12px 14px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+    transition:background .3s;
+    cursor:pointer;
+  }
+  .row:last-child{border-bottom:none;}
+  .row.flash{background:var(--panel-2);}
+  .row:hover{background:var(--panel-2);}
+  .row:active{background:#191c22;}
+
+  .coin{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+  }
+  .coin .sym{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:700;
+    font-size:17px;
+    letter-spacing:.02em;
+  }
+  .coin .name{
+    font-size:10px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .price{
+    text-align:right;
+    font-size:13px;
+    font-weight:500;
+  }
+  .price .cents{color:var(--muted); font-size:11px;}
+
+  .chg{
+    text-align:right;
+    font-size:12.5px;
+    font-weight:600;
+  }
+  .chg.up{color:var(--up);}
+  .chg.down{color:var(--down);}
+
+  .spark{
+    display:flex;
+    justify-content:center;
+  }
+  .spark svg{display:block;}
+
+  .signal{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    justify-content:center;
+    gap:4px;
+  }
+  .pill{
+    font-size:10px;
+    letter-spacing:.04em;
+    padding:4px 8px;
+    border-radius:999px;
+    white-space:nowrap;
+    text-transform:uppercase;
+    font-weight:600;
+  }
+  .pill.strong-up{background:var(--up-dim); color:var(--up);}
+  .pill.up{background:var(--up-dim); color:var(--up); opacity:.85;}
+  .pill.neutral{background:var(--amber-dim); color:var(--amber);}
+  .pill.down{background:var(--down-dim); color:var(--down); opacity:.85;}
+  .pill.strong-down{background:var(--down-dim); color:var(--down);}
+  .rsi-tag{
+    font-size:9.5px;
+    color:var(--muted);
+    letter-spacing:.03em;
+  }
+
+  .disclaimer{
+    margin-top:16px;
+    padding:14px 16px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--panel);
+    font-size:11.5px;
+    color:var(--muted);
+    line-height:1.6;
+  }
+  .disclaimer b{color:var(--amber); font-weight:600;}
+
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:10.5px;
+    padding:24px 14px 10px;
+    letter-spacing:.03em;
+  }
+
+  .loading{
+    padding:40px 14px;
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+  }
+
+  /* --- chart modal --- */
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(6,7,8,.75);
+    backdrop-filter:blur(2px);
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:100;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s;
+  }
+  .overlay.show{opacity:1; pointer-events:auto;}
+
+  .modal{
+    width:100%;
+    max-width:760px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-bottom:none;
+    border-radius:16px 16px 0 0;
+    padding:20px 20px 26px;
+    transform:translateY(16px);
+    transition:transform .25s ease;
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  .overlay.show .modal{transform:translateY(0);}
+
+  .modal-head{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .modal-head .titles .sym{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800;
+    font-size:26px;
+    letter-spacing:.02em;
+  }
+  .modal-head .titles .name{
+    color:var(--muted);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    margin-top:2px;
+  }
+  .modal-close{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    width:32px; height:32px;
+    border-radius:50%;
+    font-size:16px;
+    line-height:1;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .modal-close:hover{background:var(--line);}
+
+  .modal-price{
+    margin-top:14px;
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .modal-price .big{
+    font-size:26px;
+    font-weight:600;
+  }
+  .modal-price .chg{
+    font-size:14px;
+    font-weight:600;
+    text-align:left;
+  }
+
+  .ranges{
+    display:flex;
+    gap:6px;
+    margin-top:16px;
+  }
+  .ranges button{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    padding:6px 12px;
+    border-radius:999px;
+    cursor:pointer;
+    letter-spacing:.03em;
+  }
+  .ranges button.active{
+    color:var(--bg);
+    background:var(--amber);
+    border-color:var(--amber);
+    font-weight:600;
+  }
+
+  .chart-box{
+    margin-top:18px;
+    position:relative;
+  }
+  .chart-box svg{display:block; width:100%; height:auto;}
+  .chart-meta{
+    display:flex;
+    justify-content:space-between;
+    font-size:10.5px;
+    color:var(--muted);
+    margin-top:6px;
+  }
+  .chart-loading{
+    padding:50px 0;
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .crosshair-price{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:28px;
+    font-weight:700;
+    fill:#F2F2F0;
+  }
+  .crosshair-date{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:17px;
+    fill:#9AA0A8;
+  }
+
+  /* --- tabs --- */
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin-top:16px;
+  }
+  .tabs button{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.04em;
+    padding:10px;
+    border-radius:8px;
+    cursor:pointer;
+    text-transform:uppercase;
+  }
+  .tabs button.active{
+    color:var(--bg);
+    background:var(--amber);
+    border-color:var(--amber);
+    font-weight:700;
+  }
+
+  /* --- portfolio --- */
+  .summary-card{
+    margin-top:14px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--panel);
+    padding:18px;
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:14px;
+  }
+  .summary-card .stat .label{
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .summary-card .stat .value{
+    font-size:16px;
+    font-weight:600;
+  }
+  .summary-card .stat .value.up{color:var(--up);}
+  .summary-card .stat .value.down{color:var(--down);}
+
+  .pos-row{
+    display:grid;
+    grid-template-columns: 1.5fr 1fr 1fr .6fr;
+    align-items:center;
+    padding:12px 14px;
+    background:var(--panel);
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .pos-row:last-child{border-bottom:none;}
+  .pos-row:hover{background:var(--panel-2);}
+  .pos-row .qty{
+    font-size:10px;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .pos-row .value{
+    text-align:right;
+    font-size:13px;
+    font-weight:500;
+  }
+  .pos-row .pnl{
+    text-align:right;
+    font-size:12px;
+    font-weight:600;
+  }
+  .pos-row .sell-btn{
+    justify-self:end;
+    background:var(--down-dim);
+    color:var(--down);
+    border:none;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .sell-btn:hover{opacity:.8;}
+
+  .empty-state{
+    padding:44px 20px;
+    text-align:center;
+    color:var(--muted);
+    font-size:12.5px;
+    line-height:1.6;
+  }
+  .empty-state .big-icon{
+    font-size:26px;
+    margin-bottom:10px;
+  }
+
+  .fab{
+    position:fixed;
+    right:18px;
+    bottom:22px;
+    background:var(--amber);
+    color:var(--bg);
+    border:none;
+    border-radius:999px;
+    padding:14px 20px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:.02em;
+    box-shadow:0 6px 20px rgba(0,0,0,.4);
+    cursor:pointer;
+    z-index:50;
+  }
+  .fab:active{transform:scale(.97);}
+
+  /* --- buy modal --- */
+  .field{
+    margin-top:16px;
+  }
+  .field label{
+    display:block;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  select.coin-select{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    padding:12px;
+    border-radius:8px;
+    appearance:none;
+  }
+  .token-box{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+  }
+  .token-box input{
+    flex:1;
+    min-width:0;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:10px 12px;
+    border-radius:8px;
+    outline:none;
+  }
+  .token-box button{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--amber);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    font-weight:600;
+    padding:0 16px;
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .amount-input{
+    display:flex;
+    align-items:center;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:0 12px;
+  }
+  .amount-input span{
+    color:var(--muted);
+    font-size:14px;
+  }
+  .amount-input input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:16px;
+    padding:12px 8px;
+  }
+  .quick-amounts{
+    display:flex;
+    gap:6px;
+    margin-top:8px;
+  }
+  .quick-amounts button{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .buy-preview{
+    margin-top:16px;
+    padding:12px 14px;
+    background:var(--panel-2);
+    border-radius:8px;
+    font-size:12px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+  }
+  .buy-preview b{color:var(--text);}
+  .buy-confirm{
+    width:100%;
+    margin-top:18px;
+    background:var(--up);
+    color:#06110B;
+    border:none;
+    padding:14px;
+    border-radius:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .buy-confirm:disabled{opacity:.5; cursor:not-allowed;}
+  .sim-note{
+    margin-top:12px;
+    font-size:10.5px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .sim-note b{color:var(--amber);}
+
+  .position-banner{
+    margin-top:16px;
+    padding:14px;
+    border:1px solid var(--amber-dim);
+    background:rgba(232,163,61,.06);
+    border-radius:10px;
+  }
+  .position-stats{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px;
+  }
+  .position-stats .plabel{
+    font-size:9.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  .position-stats .pvalue{
+    font-size:13px;
+    font-weight:600;
+  }
+  .chart-mode-toggle{
+    display:flex;
+    gap:6px;
+    margin-top:12px;
+  }
+  .chart-mode-toggle button{
+    flex:1;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--muted);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    padding:8px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  .chart-mode-toggle button.active{
+    color:var(--bg);
+    background:var(--amber);
+    border-color:var(--amber);
+    font-weight:600;
+  }
+
+  @media (max-width:480px){
+    header.hero h1{font-size:26px;}
+    .col-heads, .row{grid-template-columns: 1.4fr .9fr .9fr 0fr 1.2fr;}
+    .spark{display:none;}
+    .coin .name{max-width:110px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .tape{animation:none;}
+    .dot{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="tape-wrap">
+  <div class="tape" id="tape">
+    <span>carregando cotações…</span>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="eyebrow">Carteira Virtual · Top 10 em Alta</div>
+  <h1>Radar Cripto</h1>
+  <p class="sub">Acompanhe cotações em tempo real, veja o histórico em gráfico e monte uma carteira de investimento virtual para simular quanto você ganharia (ou perderia) sem arriscar dinheiro de verdade.</p>
+  <div class="status"><span class="dot"></span><span id="statusText">conectando à CoinGecko…</span></div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="active" id="tabMercado">Cripto</button>
+    <button id="tabAcoes">Ações</button>
+    <button id="tabCarteira">Carteira</button>
+  </div>
+
+  <div id="viewMercado">
+    <div class="board" id="board">
+      <div class="col-heads">
+        <span>Ativo</span>
+        <span>Preço</span>
+        <span>24h</span>
+        <span>7d</span>
+        <span>Indicador</span>
+      </div>
+      <div class="loading" id="loadingMsg">Buscando cotações…</div>
+    </div>
+
+    <div class="disclaimer">
+      <b>Como as moedas são escolhidas:</b> a cada atualização, buscamos as 100 maiores por valor de mercado e mostramos aqui as 10 que mais estão subindo (mix de variação em 1h e 24h) — a lista muda com o tempo, não é fixa. <b>Sobre o indicador:</b> o pill (Compra forte / Compra / Neutro / Venda / Venda forte) combina RSI, cruzamento de médias móveis e momentum recente — é um indicador técnico, não uma previsão. Preço de cripto é muito volátil e pode reverter a qualquer momento. Isso não é recomendação de investimento.
+    </div>
+  </div>
+
+  <div id="viewAcoes" style="display:none;">
+    <div class="token-box" id="tokenBox">
+      <input type="text" id="brapiTokenInput" placeholder="Token brapi.dev (opcional)">
+      <button id="saveTokenBtn">Salvar</button>
+    </div>
+    <div class="board" id="stockBoard">
+      <div class="col-heads">
+        <span>Ativo</span>
+        <span>Preço</span>
+        <span>24h</span>
+        <span>7d</span>
+        <span>Indicador</span>
+      </div>
+      <div class="loading" id="loadingStockMsg">Buscando cotações…</div>
+    </div>
+
+    <div class="disclaimer">
+      <b>Ações via B3 (brapi.dev):</b> sem token, mostramos 4 ações de teste (PETR4, VALE3, MGLU3, ITUB4). Com um token grátis (crie em brapi.dev/dashboard), liberamos mais 17 ações diversificadas por setor (bancos, mineração, varejo, saúde, energia, agro, telecom) — escolhidas por liquidez/relevância, não por previsão de retorno. Cotação com possível atraso, indicador calculado com histórico de preço diário — não é recomendação de investimento.
+    </div>
+  </div>
+
+  <div id="viewCarteira" style="display:none;">
+    <div class="summary-card" id="summaryCard">
+      <div class="stat">
+        <div class="label">Investido</div>
+        <div class="value" id="sumInvested">R$ 0,00</div>
+      </div>
+      <div class="stat">
+        <div class="label">Valor atual</div>
+        <div class="value" id="sumCurrent">R$ 0,00</div>
+      </div>
+      <div class="stat">
+        <div class="label">Resultado</div>
+        <div class="value" id="sumPnl">R$ 0,00</div>
+      </div>
+    </div>
+
+    <div class="board" id="portfolioBoard" style="margin-top:14px;"></div>
+
+    <div class="disclaimer">
+      <b>Carteira virtual:</b> nenhum valor real é investido. As posições e o saldo ficam guardados só neste dispositivo/navegador, com preços reais de mercado.
+    </div>
+  </div>
+
+  <footer>Cripto via CoinGecko · Ações via brapi.dev · atualiza a cada 45s</footer>
+</main>
+
+<button class="fab" id="fabInvest">+ Investir</button>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="titles">
+        <div class="sym" id="modalSym">—</div>
+        <div class="name" id="modalName">—</div>
+      </div>
+      <button class="modal-close" id="modalClose" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="modal-price">
+      <span class="big" id="modalPrice">—</span>
+      <span class="chg" id="modalChg">—</span>
+    </div>
+
+    <div class="position-banner" id="positionBanner" style="display:none;">
+      <div class="position-stats">
+        <div class="pstat">
+          <div class="plabel">Investido</div>
+          <div class="pvalue" id="posInvested">—</div>
+        </div>
+        <div class="pstat">
+          <div class="plabel">Vale hoje</div>
+          <div class="pvalue" id="posCurrent">—</div>
+        </div>
+        <div class="pstat">
+          <div class="plabel">Resultado</div>
+          <div class="pvalue" id="posPnl">—</div>
+        </div>
+      </div>
+      <div class="chart-mode-toggle" id="chartModeToggle">
+        <button data-mode="price" class="active">Preço</button>
+        <button data-mode="value">Meu investimento</button>
+      </div>
+    </div>
+
+    <div class="ranges" id="ranges">
+      <button data-days="1">24H</button>
+      <button data-days="7">7D</button>
+      <button data-days="30">30D</button>
+      <button data-days="90">90D</button>
+    </div>
+
+    <div class="chart-box" id="chartBox">
+      <div class="chart-loading">carregando histórico…</div>
+    </div>
+
+    <button class="buy-confirm" id="investFromChart" style="background:var(--amber); color:var(--bg);">Investir em <span id="investFromChartSym"></span></button>
+  </div>
+</div>
+
+<div class="overlay" id="buyOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="titles">
+        <div class="sym">Investir</div>
+        <div class="name">carteira virtual</div>
+      </div>
+      <button class="modal-close" id="buyClose" aria-label="Fechar">✕</button>
+    </div>
+
+    <div class="field">
+      <label for="buyCoinSelect">Moeda</label>
+      <select class="coin-select" id="buyCoinSelect"></select>
+    </div>
+
+    <div class="field">
+      <label for="buyAmount">Valor a investir (R$)</label>
+      <div class="amount-input">
+        <span>R$</span>
+        <input type="number" id="buyAmount" placeholder="0,00" min="0" step="0.01" inputmode="decimal">
+      </div>
+      <div class="quick-amounts">
+        <button data-val="100">R$100</button>
+        <button data-val="500">R$500</button>
+        <button data-val="1000">R$1.000</button>
+        <button data-val="5000">R$5.000</button>
+      </div>
+    </div>
+
+    <div class="buy-preview">
+      <span>Você recebe</span>
+      <b id="buyQtyPreview">—</b>
+    </div>
+
+    <button class="buy-confirm" id="buyConfirm" disabled>Comprar</button>
+    <div class="sim-note"><b>Simulação:</b> compra ao preço atual de mercado, sem taxas. Nenhum dinheiro real é movimentado.</div>
+  </div>
+</div>
+
+<script>
+const VS = "brl";
+// Busca um universo maior (top 100 por valor de mercado) pra depois selecionar,
+// no cliente, as 10 moedas que estão subindo mais rápido (não é lista fixa).
+const API = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${VS}&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=1h,24h,7d`;
+
+let lastPrices = {};
+let coinsData = {}; // id -> latest coin object from /markets
+let topCoinIds = []; // ids das 10 moedas exibidas no momento (usado pra popular o seletor de compra)
+
+// Score de momentum usado só pra RANQUEAR quais moedas aparecem no board
+// (mix equilibrado de 1h e 24h) — o pill/RSI de cada linha continua vindo de buildSignal().
+function momentumScore(c){
+  const h1 = c.price_change_percentage_1h_in_currency ?? 0;
+  const h24 = c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? 0;
+  return 0.5*h1 + 0.5*h24;
+}
+let activeCoinId = null;
+let activeDays = 7;
+
+/* ---------- portfolio (virtual wallet) ---------- */
+const PORTFOLIO_KEY = 'radar-cripto-portfolio-v1';
+
+function loadPortfolio(){
+  try{
+    const raw = localStorage.getItem(PORTFOLIO_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }catch(e){ return {}; }
+}
+function savePortfolio(p){
+  try{ localStorage.setItem(PORTFOLIO_KEY, JSON.stringify(p)); }catch(e){}
+}
+// portfolio shape: { [coinId]: { qty: number, invested: number } }
+let portfolio = loadPortfolio();
+
+function fmtPrice(n){
+  if(n >= 1000) return n.toLocaleString('pt-BR', {maximumFractionDigits:0});
+  if(n >= 1) return n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  return n.toLocaleString('pt-BR', {minimumFractionDigits:4, maximumFractionDigits:6});
+}
+
+function fmtPct(n){
+  if(n === null || n === undefined || isNaN(n)) return "—";
+  const s = n > 0 ? "+" : "";
+  return `${s}${n.toFixed(2)}%`;
+}
+
+function fmtMoney(n){
+  const s = n < 0 ? "-" : "";
+  return s + "R$ " + Math.abs(n).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+/* ---------- indicador técnico: RSI + médias móveis + momentum ---------- */
+
+function calcRSI(prices, period=14){
+  if(!prices || prices.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for(let i = prices.length - period; i < prices.length; i++){
+    const diff = prices[i] - prices[i-1];
+    if(diff >= 0) gains += diff; else losses -= diff;
+  }
+  const avgGain = gains / period, avgLoss = losses / period;
+  if(avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
+
+function calcMA(prices, period){
+  if(!prices || prices.length < period) return null;
+  const slice = prices.slice(-period);
+  return slice.reduce((a,b) => a + b, 0) / slice.length;
+}
+
+// c = objeto de moeda vindo da API (/coins/markets com sparkline_in_7d)
+function buildSignal(c){
+  const h1 = c.price_change_percentage_1h_in_currency ?? 0;
+  const h24 = c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h ?? 0;
+  const h7 = c.price_change_percentage_7d_in_currency ?? 0;
+
+  // ~168 pontos horários dos últimos 7 dias + preço mais recente
+  const prices = c.sparkline_in_7d ? c.sparkline_in_7d.price.slice() : [];
+  if(prices.length && c.current_price) prices.push(c.current_price);
+
+  const rsi = calcRSI(prices, 14);          // sobrecomprado/sobrevendido
+  const maShort = calcMA(prices, 12);       // média curta (~12h)
+  const maLong = calcMA(prices, 48);        // média longa (~48h)
+
+  let score = 0;
+
+  if(maShort !== null && maLong !== null){
+    score += maShort > maLong ? 1 : -1;     // cruzamento de médias
+  }
+
+  if(rsi !== null){
+    if(rsi < 30) score += 2;                // sobrevendido → força de compra
+    else if(rsi < 45) score += 0.5;
+    else if(rsi > 70) score -= 2;           // sobrecomprado → força de venda
+    else if(rsi > 55) score -= 0.5;
+  }
+
+  const momentum = 0.5*h1 + 0.3*h24 + 0.2*h7;
+  if(momentum > 1) score += 1;
+  else if(momentum < -1) score -= 1;
+
+  let out;
+  if(score >= 2.5) out = {label:"Compra forte", cls:"strong-up", arrow:"▲▲"};
+  else if(score >= 1) out = {label:"Compra", cls:"up", arrow:"▲"};
+  else if(score <= -2.5) out = {label:"Venda forte", cls:"strong-down", arrow:"▼▼"};
+  else if(score <= -1) out = {label:"Venda", cls:"down", arrow:"▼"};
+  else out = {label:"Neutro", cls:"neutral", arrow:"→"};
+
+  out.rsi = rsi;
+  return out;
+}
+
+function sparkPath(values, w=64, h=26){
+  if(!values || values.length < 2) return {path:"", up:true};
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = (max - min) || 1;
+  const step = w / (values.length - 1);
+  const pts = values.map((v,i) => {
+    const x = i*step;
+    const y = h - ((v - min) / range) * h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return {path: "M" + pts.join(" L "), up: values[values.length-1] >= values[0]};
+}
+
+function renderTape(coins){
+  const tape = document.getElementById('tape');
+  const items = coins.map(c => {
+    const cls = c.price_change_percentage_24h >= 0 ? 'u' : 'd';
+    return `<span><b>${c.symbol.toUpperCase()}</b> R$ ${fmtPrice(c.current_price)} <span class="${cls}">${fmtPct(c.price_change_percentage_24h)}</span></span>`;
+  });
+  tape.innerHTML = items.join('') + items.join(''); // duplicate for seamless loop
+}
+
+function renderBoard(coins, boardId='board'){
+  const board = document.getElementById(boardId);
+  const head = `<div class="col-heads">
+      <span>Ativo</span><span>Preço</span><span>24h</span><span>7d</span><span>Indicador</span>
+    </div>`;
+
+  const rows = coins.map(c => {
+    const h24 = c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h;
+    const sig = buildSignal(c);
+    const spark = sparkPath(c.sparkline_in_7d ? c.sparkline_in_7d.price.slice(-48) : []);
+    const flash = lastPrices[c.id] && lastPrices[c.id] !== c.current_price ? 'flash' : '';
+    lastPrices[c.id] = c.current_price;
+
+    return `<div class="row ${flash}" data-id="${c.id}">
+      <div class="coin">
+        <span class="sym">${c.symbol.toUpperCase()}</span>
+        <span class="name">${c.name}</span>
+      </div>
+      <div class="price">R$ ${fmtPrice(c.current_price)}</div>
+      <div class="chg ${h24>=0?'up':'down'}">${fmtPct(h24)}</div>
+      <div class="spark">
+        <svg width="64" height="26" viewBox="0 0 64 26">
+          <path d="${spark.path}" fill="none" stroke="${spark.up ? '#3DDC84':'#FF5470'}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="signal">
+        <span class="pill ${sig.cls}">${sig.arrow} ${sig.label}</span>
+        ${sig.rsi !== null ? `<span class="rsi-tag">RSI ${sig.rsi.toFixed(0)}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  board.innerHTML = head + rows;
+
+  board.querySelectorAll('.row').forEach(row => {
+    row.addEventListener('click', () => openModal(row.dataset.id));
+  });
+}
+
+async function loadData(){
+  try{
+    const res = await fetch(API);
+    if(!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json(); // top 100 por market cap
+    data.forEach(c => coinsData[c.id] = c);
+
+    // Ranqueia por momentum (mix 1h+24h) e fica só com as 10 que mais sobem.
+    const topRising = data.slice().sort((a,b) => momentumScore(b) - momentumScore(a)).slice(0, 10);
+    topCoinIds = topRising.map(c => c.id);
+
+    // Se o usuário tem posição em moeda que nem entrou no top 100 buscado, busca a
+    // cotação dela à parte, pra manter o resultado (P&L) atualizado até ele vender.
+    const fetchedIds = data.map(c => c.id);
+    const heldIds = Object.keys(portfolio).filter(id => portfolio[id].qty > 0 && !isStockId(id));
+    const missingIds = heldIds.filter(id => !fetchedIds.includes(id));
+    if(missingIds.length){
+      try{
+        const extraUrl = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=${VS}&ids=${missingIds.join(",")}`;
+        const extraRes = await fetch(extraUrl);
+        if(extraRes.ok){
+          const extraData = await extraRes.json();
+          extraData.forEach(c => coinsData[c.id] = c);
+        }
+      }catch(e){ /* mantém último preço conhecido se essa busca extra falhar */ }
+    }
+
+    renderTape(topRising);
+    renderBoard(topRising);
+    renderPortfolio();
+    if(activeCoinId) updateModalHeader(activeCoinId);
+    document.getElementById('statusText').textContent =
+      'atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+  }catch(err){
+    document.getElementById('statusText').textContent = 'erro ao buscar dados — tentando de novo em instantes…';
+    console.error(err);
+  }
+}
+
+loadData();
+setInterval(loadData, 45000);
+
+/* ---------- ações (B3, via brapi.dev) ---------- */
+
+// Tickers que funcionam sem token (sandbox da brapi.dev)
+const STOCK_FREE = ["PETR4","VALE3","MGLU3","ITUB4"];
+// Liberados só quando o usuário informa um token grátis (brapi.dev/dashboard).
+// Diversificadas por setor (bancos, mineração/siderurgia, varejo, saúde, energia,
+// agro, telecom) — critério é liquidez/relevância na B3, não previsão de retorno.
+const STOCK_EXTRA = [
+  "BBDC4","ABEV3","WEGE3","B3SA3","RENT3","ITSA4", // já existentes
+  "BBAS3","GGBR4","CSNA3",                          // bancos + mineração/siderurgia
+  "LREN3","ARZZ3",                                  // varejo/consumo
+  "RDOR3","HAPV3",                                  // saúde
+  "EQTL3","ELET3",                                  // energia elétrica
+  "JBSS3","SLCE3",                                  // agro/proteína
+  "VIVT3"                                           // telecom
+];
+
+const STOCK_TOKEN_KEY = 'radar-cripto-brapi-token';
+function loadStockToken(){ try{ return localStorage.getItem(STOCK_TOKEN_KEY) || ''; }catch(e){ return ''; } }
+function saveStockToken(t){ try{ localStorage.setItem(STOCK_TOKEN_KEY, t); }catch(e){} }
+let stockToken = loadStockToken();
+
+let stockIds = []; // tickers exibidos no momento (pra popular o seletor de compra)
+
+function isStockId(id){ return /^[A-Z0-9]+$/.test(id); }
+
+// Normaliza a resposta da brapi.dev pro mesmo formato usado pelas moedas,
+// pra reaproveitar renderBoard/buildSignal sem duplicar lógica.
+function normalizeStock(r){
+  const closes = (r.historicalDataPrice || [])
+    .map(h => h.close)
+    .filter(v => v !== null && v !== undefined);
+  const last = r.regularMarketPrice;
+  let pct7d = null;
+  if(closes.length >= 6){
+    const base = closes[closes.length - 6];
+    if(base) pct7d = ((closes[closes.length - 1] - base) / base) * 100;
+  }
+  return {
+    id: r.symbol,
+    symbol: r.symbol,
+    name: r.shortName || r.longName || r.symbol,
+    current_price: last,
+    price_change_percentage_1h_in_currency: null,
+    price_change_percentage_24h_in_currency: r.regularMarketChangePercent,
+    price_change_percentage_24h: r.regularMarketChangePercent,
+    price_change_percentage_7d_in_currency: pct7d,
+    sparkline_in_7d: { price: closes }
+  };
+}
+
+async function loadStocks(){
+  try{
+    const hasToken = !!stockToken;
+    const heldStockIds = Object.keys(portfolio).filter(id => portfolio[id].qty > 0 && isStockId(id));
+    const baseList = hasToken ? [...STOCK_FREE, ...STOCK_EXTRA] : [...STOCK_FREE];
+    const tickers = Array.from(new Set([...baseList, ...heldStockIds]));
+
+    const tokenParam = hasToken ? `&token=${encodeURIComponent(stockToken)}` : '';
+    const url = `https://brapi.dev/api/quote/${tickers.join(',')}?range=3mo&interval=1d${tokenParam}`;
+
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('API error ' + res.status);
+    const json = await res.json();
+    const results = (json.results || []).map(normalizeStock);
+
+    results.forEach(c => coinsData[c.id] = c);
+    stockIds = results.filter(c => baseList.includes(c.id)).map(c => c.id);
+
+    renderBoard(results, 'stockBoard');
+    renderPortfolio();
+    if(activeCoinId) updateModalHeader(activeCoinId);
+  }catch(err){
+    console.error(err);
+    const board = document.getElementById('stockBoard');
+    if(board && !board.querySelector('.row')){
+      board.innerHTML = `<div class="col-heads">
+          <span>Ativo</span><span>Preço</span><span>24h</span><span>7d</span><span>Indicador</span>
+        </div>
+        <div class="loading">erro ao buscar ações — tentando de novo em instantes…</div>`;
+    }
+  }
+}
+
+document.getElementById('brapiTokenInput').value = stockToken;
+document.getElementById('saveTokenBtn').addEventListener('click', () => {
+  stockToken = document.getElementById('brapiTokenInput').value.trim();
+  saveStockToken(stockToken);
+  loadStocks();
+});
+
+loadStocks();
+setInterval(loadStocks, 45000);
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+/* ---------- chart modal ---------- */
+
+const overlay = document.getElementById('overlay');
+const chartBox = document.getElementById('chartBox');
+
+function updateModalHeader(id){
+  const c = coinsData[id];
+  if(!c) return;
+  const h24 = c.price_change_percentage_24h_in_currency ?? c.price_change_percentage_24h;
+  document.getElementById('modalSym').textContent = c.symbol.toUpperCase();
+  document.getElementById('modalName').textContent = c.name;
+  document.getElementById('modalPrice').textContent = 'R$ ' + fmtPrice(c.current_price);
+  const chgEl = document.getElementById('modalChg');
+  chgEl.textContent = fmtPct(h24) + ' (24h)';
+  chgEl.className = 'chg ' + (h24 >= 0 ? 'up' : 'down');
+
+  updatePositionBanner(id);
+}
+
+function updatePositionBanner(id){
+  const banner = document.getElementById('positionBanner');
+  const pos = portfolio[id];
+  const c = coinsData[id];
+
+  if(!pos || pos.qty <= 0 || !c){
+    banner.style.display = 'none';
+    return;
+  }
+
+  const currentValue = pos.qty * c.current_price;
+  const pnl = currentValue - pos.invested;
+
+  document.getElementById('posInvested').textContent = fmtMoney(pos.invested);
+  document.getElementById('posCurrent').textContent = fmtMoney(currentValue);
+  const pnlEl = document.getElementById('posPnl');
+  pnlEl.textContent = fmtMoney(pnl);
+  pnlEl.style.color = pnl >= 0 ? 'var(--up)' : 'var(--down)';
+
+  banner.style.display = 'block';
+}
+
+function openModal(id){
+  activeCoinId = id;
+  chartMode = 'price';
+  updateModalHeader(id);
+  overlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  document.querySelectorAll('#ranges button').forEach(b =>
+    b.classList.toggle('active', Number(b.dataset.days) === activeDays)
+  );
+  document.querySelectorAll('#chartModeToggle button').forEach(b =>
+    b.classList.toggle('active', b.dataset.mode === chartMode)
+  );
+
+  loadChart(id, activeDays);
+}
+
+function closeModal(){
+  overlay.classList.remove('show');
+  document.body.style.overflow = '';
+  activeCoinId = null;
+}
+
+document.getElementById('modalClose').addEventListener('click', closeModal);
+overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(); });
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
+
+document.getElementById('ranges').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if(!btn || !activeCoinId) return;
+  activeDays = Number(btn.dataset.days);
+  document.querySelectorAll('#ranges button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadChart(activeCoinId, activeDays);
+});
+
+document.getElementById('chartModeToggle').addEventListener('click', (e) => {
+  const btn = e.target.closest('button');
+  if(!btn || !activeCoinId) return;
+  chartMode = btn.dataset.mode;
+  document.querySelectorAll('#chartModeToggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderActiveChart();
+});
+
+let lastFetchedPrices = null;
+let lastFetchedDays = null;
+let chartMode = 'price'; // 'price' | 'value'
+
+async function loadChart(id, days){
+  chartBox.innerHTML = '<div class="chart-loading">carregando histórico…</div>';
+  try{
+    let prices;
+    if(isStockId(id)){
+      const rangeMap = {1:'5d', 7:'1mo', 30:'3mo', 90:'6mo'};
+      const range = rangeMap[days] || '3mo';
+      const tokenParam = stockToken ? `&token=${encodeURIComponent(stockToken)}` : '';
+      const url = `https://brapi.dev/api/quote/${id}?range=${range}&interval=1d${tokenParam}`;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('API error ' + res.status);
+      const json = await res.json();
+      const hist = (json.results && json.results[0] && json.results[0].historicalDataPrice) || [];
+      prices = hist
+        .filter(h => h.close !== null && h.close !== undefined)
+        .map(h => [h.date * 1000, h.close]);
+    }else{
+      const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=${VS}&days=${days}`;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('API error ' + res.status);
+      const data = await res.json();
+      prices = data.prices;
+    }
+    if(id !== activeCoinId) return; // user already switched coin
+    lastFetchedPrices = prices;
+    lastFetchedDays = days;
+    renderActiveChart();
+  }catch(err){
+    if(id !== activeCoinId) return;
+    chartBox.innerHTML = '<div class="chart-loading">não foi possível carregar o histórico agora.</div>';
+    console.error(err);
+  }
+}
+
+function renderActiveChart(){
+  if(!lastFetchedPrices || !activeCoinId) return;
+  const pos = portfolio[activeCoinId];
+  if(chartMode === 'value' && pos && pos.qty > 0){
+    drawValueChart(lastFetchedPrices, lastFetchedDays, pos);
+  }else{
+    drawPriceChart(lastFetchedPrices, lastFetchedDays);
+  }
+}
+
+function drawPriceChart(prices, days){
+  if(!prices || prices.length < 2){
+    chartBox.innerHTML = '<div class="chart-loading">sem dados suficientes.</div>';
+    return;
+  }
+  const values = prices.map(p => p[1]);
+  const times = prices.map(p => p[0]);
+  const up = values[values.length - 1] >= values[0];
+  const color = up ? '#3DDC84' : '#FF5470';
+
+  const metaLeft = new Date(times[0]).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour: days<=1?'2-digit':undefined, minute: days<=1?'2-digit':undefined});
+  const metaRight = new Date(times[times.length-1]).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour: days<=1?'2-digit':undefined, minute: days<=1?'2-digit':undefined});
+  const min = Math.min(...values), max = Math.max(...values);
+  const metaCenter = `R$ ${fmtPrice(min)} — R$ ${fmtPrice(max)}`;
+
+  renderSvgChart({
+    values, times, color,
+    refValue: null,
+    refLabel: '',
+    metaLeft, metaCenter, metaRight,
+    crosshairFormat: (v, t) => ({
+      primary: `R$ ${fmtPrice(v)}`,
+      secondary: t.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})
+    })
+  });
+}
+
+function drawValueChart(prices, days, pos){
+  let filtered = pos.since ? prices.filter(p => p[0] >= pos.since) : prices.slice();
+  if(filtered.length < 2) filtered = prices.slice(-Math.min(6, prices.length));
+  if(filtered.length < 2){
+    chartBox.innerHTML = '<div class="chart-loading">compra muito recente para esse período — tente 24H.</div>';
+    return;
+  }
+
+  const values = filtered.map(p => p[1] * pos.qty);
+  const times = filtered.map(p => p[0]);
+  const invested = pos.invested;
+  const finalVal = values[values.length - 1];
+  const up = finalVal >= invested;
+  const color = up ? '#3DDC84' : '#FF5470';
+
+  const metaLeft = new Date(times[0]).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour: days<=1?'2-digit':undefined, minute: days<=1?'2-digit':undefined});
+  const metaRight = new Date(times[times.length-1]).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour: days<=1?'2-digit':undefined, minute: days<=1?'2-digit':undefined});
+  const metaCenter = `Investido: R$ ${fmtPrice(invested)}`;
+
+  renderSvgChart({
+    values, times, color,
+    refValue: invested,
+    refLabel: 'Investido',
+    metaLeft, metaCenter, metaRight,
+    crosshairFormat: (v, t) => {
+      const pnl = v - invested;
+      const sign = pnl >= 0 ? '+' : '-';
+      return {
+        primary: `R$ ${fmtPrice(v)}`,
+        secondary: `${sign}R$ ${fmtPrice(Math.abs(pnl))} · ${t.toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}`
+      };
+    }
+  });
+}
+
+function renderSvgChart({values, times, color, refValue, refLabel, metaLeft, metaCenter, metaRight, crosshairFormat}){
+  const W = 680, H = 220, PAD = 8;
+  let min = Math.min(...values), max = Math.max(...values);
+  if(refValue != null){ min = Math.min(min, refValue); max = Math.max(max, refValue); }
+  const range = (max - min) || 1;
+
+  const stepX = (W - PAD*2) / (values.length - 1);
+  const pts = values.map((v, i) => {
+    const x = PAD + i * stepX;
+    const y = PAD + (H - PAD*2) - ((v - min) / range) * (H - PAD*2);
+    return [x, y];
+  });
+
+  const linePath = 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' L');
+  const areaPath = linePath + ` L${pts[pts.length-1][0].toFixed(1)},${H-PAD} L${pts[0][0].toFixed(1)},${H-PAD} Z`;
+  const gradId = 'grad-' + Math.random().toString(36).slice(2, 8);
+
+  let refLineSvg = '';
+  if(refValue != null){
+    const refY = PAD + (H - PAD*2) - ((refValue - min) / range) * (H - PAD*2);
+    refLineSvg = `
+      <line x1="${PAD}" y1="${refY.toFixed(1)}" x2="${W-PAD}" y2="${refY.toFixed(1)}" stroke="#E8A33D" stroke-width="1.4" stroke-dasharray="5,4"/>
+      <text x="${PAD+4}" y="${(refY - 6).toFixed(1)}" font-family="'IBM Plex Mono', monospace" font-size="12" fill="#E8A33D">${refLabel}: R$ ${fmtPrice(refValue)}</text>`;
+  }
+
+  chartBox.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" id="chartSvg">
+      <defs>
+        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${areaPath}" fill="url(#${gradId})" stroke="none"/>
+      <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      ${refLineSvg}
+      <line id="crosshairLine" x1="0" y1="${PAD}" x2="0" y2="${H-PAD}" stroke="#7A7F87" stroke-width="1" stroke-dasharray="3,3" style="display:none"/>
+      <circle id="crosshairDot" r="5" fill="${color}" stroke="#0A0B0D" stroke-width="2" style="display:none"/>
+      <g id="crosshairLabelGroup" style="display:none">
+        <rect id="crosshairBg" rx="8" ry="8" fill="#181B21" stroke="#33373F" stroke-width="1"/>
+        <text id="crosshairPriceText" class="crosshair-price"></text>
+        <text id="crosshairDateText" class="crosshair-date"></text>
+      </g>
+    </svg>
+    <div class="chart-meta">
+      <span>${metaLeft}</span>
+      <span>${metaCenter}</span>
+      <span>${metaRight}</span>
+    </div>
+  `;
+
+  const svg = document.getElementById('chartSvg');
+  const line = document.getElementById('crosshairLine');
+  const dot = document.getElementById('crosshairDot');
+  const labelGroup = document.getElementById('crosshairLabelGroup');
+  const labelBg = document.getElementById('crosshairBg');
+  const priceText = document.getElementById('crosshairPriceText');
+  const dateText = document.getElementById('crosshairDateText');
+
+  const BOX_W = 290, BOX_H = 78, BOX_PAD = 16;
+
+  function moveCrosshair(clientX){
+    const rect = svg.getBoundingClientRect();
+    const relX = ((clientX - rect.left) / rect.width) * W;
+    const i = Math.round((relX - PAD) / stepX);
+    const idx = Math.max(0, Math.min(values.length - 1, i));
+    const [x, y] = pts[idx];
+
+    line.setAttribute('x1', x); line.setAttribute('x2', x); line.style.display = 'block';
+    dot.setAttribute('cx', x); dot.setAttribute('cy', y); dot.style.display = 'block';
+
+    const boxX = Math.min(Math.max(x - BOX_W/2, PAD), W - PAD - BOX_W);
+    const boxY = y > H/2 ? Math.max(PAD, y - BOX_H - 16) : Math.min(H - PAD - BOX_H, y + 16);
+
+    labelBg.setAttribute('x', boxX);
+    labelBg.setAttribute('y', boxY);
+    labelBg.setAttribute('width', BOX_W);
+    labelBg.setAttribute('height', BOX_H);
+
+    priceText.setAttribute('x', boxX + BOX_PAD);
+    priceText.setAttribute('y', boxY + 34);
+    dateText.setAttribute('x', boxX + BOX_PAD);
+    dateText.setAttribute('y', boxY + 62);
+
+    labelGroup.style.display = 'block';
+
+    const t = new Date(times[idx]);
+    const parts = crosshairFormat(values[idx], t);
+    priceText.textContent = parts.primary;
+    dateText.textContent = parts.secondary;
+  }
+
+  function hideCrosshair(){
+    line.style.display = 'none';
+    dot.style.display = 'none';
+    labelGroup.style.display = 'none';
+  }
+
+  svg.addEventListener('mousemove', (e) => moveCrosshair(e.clientX));
+  svg.addEventListener('mouseleave', hideCrosshair);
+  svg.addEventListener('touchstart', (e) => { moveCrosshair(e.touches[0].clientX); }, {passive:true});
+  svg.addEventListener('touchmove', (e) => { moveCrosshair(e.touches[0].clientX); }, {passive:true});
+  svg.addEventListener('touchend', hideCrosshair);
+}
+
+/* ---------- tabs ---------- */
+
+const tabMercado = document.getElementById('tabMercado');
+const tabAcoes = document.getElementById('tabAcoes');
+const tabCarteira = document.getElementById('tabCarteira');
+const viewMercado = document.getElementById('viewMercado');
+const viewAcoes = document.getElementById('viewAcoes');
+const viewCarteira = document.getElementById('viewCarteira');
+
+const allTabs = [
+  {btn: tabMercado, view: viewMercado},
+  {btn: tabAcoes, view: viewAcoes},
+  {btn: tabCarteira, view: viewCarteira},
+];
+
+function activateTab(target){
+  allTabs.forEach(({btn, view}) => {
+    const active = btn === target;
+    btn.classList.toggle('active', active);
+    view.style.display = active ? '' : 'none';
+  });
+}
+
+tabMercado.addEventListener('click', () => activateTab(tabMercado));
+tabAcoes.addEventListener('click', () => {
+  activateTab(tabAcoes);
+  loadStocks();
+});
+tabCarteira.addEventListener('click', () => {
+  activateTab(tabCarteira);
+  renderPortfolio();
+});
+
+/* ---------- portfolio render ---------- */
+
+function renderPortfolio(){
+  const board = document.getElementById('portfolioBoard');
+  const ids = Object.keys(portfolio).filter(id => portfolio[id].qty > 0);
+
+  if(ids.length === 0){
+    board.innerHTML = `<div class="empty-state">
+      <div class="big-icon">◈</div>
+      Você ainda não tem posições.<br>Toque em <b style="color:var(--amber)">+ Investir</b> para começar sua carteira virtual.
+    </div>`;
+    document.getElementById('sumInvested').textContent = fmtMoney(0);
+    document.getElementById('sumCurrent').textContent = fmtMoney(0);
+    const pnlEl = document.getElementById('sumPnl');
+    pnlEl.textContent = fmtMoney(0);
+    pnlEl.className = 'value';
+    return;
+  }
+
+  let totalInvested = 0, totalCurrent = 0;
+
+  const rows = ids.map(id => {
+    const pos = portfolio[id];
+    const c = coinsData[id];
+    const currentPrice = c ? c.current_price : null;
+    const currentValue = currentPrice !== null ? pos.qty * currentPrice : pos.invested;
+    const pnl = currentValue - pos.invested;
+    const pnlPct = pos.invested > 0 ? (pnl / pos.invested) * 100 : 0;
+
+    totalInvested += pos.invested;
+    totalCurrent += currentValue;
+
+    const sym = c ? c.symbol.toUpperCase() : id.toUpperCase();
+    const name = c ? c.name : id;
+    const avgPrice = pos.invested / pos.qty;
+
+    return `<div class="pos-row" data-id="${id}">
+      <div class="coin">
+        <span class="sym">${sym}</span>
+        <span class="qty">${pos.qty.toLocaleString('pt-BR', {maximumFractionDigits:6})} · pm R$ ${fmtPrice(avgPrice)}</span>
+      </div>
+      <div class="value">${fmtMoney(currentValue)}</div>
+      <div class="pnl ${pnl>=0?'up':'down'}" style="color:${pnl>=0?'var(--up)':'var(--down)'}">${fmtMoney(pnl)}<br><span style="font-weight:400; font-size:10px;">${fmtPct(pnlPct)}</span></div>
+      <button class="sell-btn" data-sell="${id}">Vender</button>
+    </div>`;
+  }).join('');
+
+  board.innerHTML = rows;
+
+  board.querySelectorAll('.pos-row').forEach(row => {
+    row.addEventListener('click', (e) => {
+      if(e.target.closest('.sell-btn')) return;
+      openModal(row.dataset.id);
+    });
+  });
+  board.querySelectorAll('.sell-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sellPosition(btn.dataset.sell);
+    });
+  });
+
+  const totalPnl = totalCurrent - totalInvested;
+  document.getElementById('sumInvested').textContent = fmtMoney(totalInvested);
+  document.getElementById('sumCurrent').textContent = fmtMoney(totalCurrent);
+  const pnlEl = document.getElementById('sumPnl');
+  pnlEl.textContent = fmtMoney(totalPnl) + ` (${fmtPct(totalInvested>0 ? (totalPnl/totalInvested)*100 : 0)})`;
+  pnlEl.className = 'value ' + (totalPnl >= 0 ? 'up' : 'down');
+}
+
+function sellPosition(id){
+  const c = coinsData[id];
+  const pos = portfolio[id];
+  if(!pos) return;
+  const currentValue = c ? pos.qty * c.current_price : pos.invested;
+  const pnl = currentValue - pos.invested;
+  const ok = confirm(
+    `Vender toda a posição em ${c ? c.symbol.toUpperCase() : id}?\n\n` +
+    `Valor de venda: ${fmtMoney(currentValue)}\n` +
+    `Resultado: ${fmtMoney(pnl)}`
+  );
+  if(!ok) return;
+  delete portfolio[id];
+  savePortfolio(portfolio);
+  renderPortfolio();
+}
+
+/* ---------- buy modal ---------- */
+
+const buyOverlay = document.getElementById('buyOverlay');
+const buyCoinSelect = document.getElementById('buyCoinSelect');
+const buyAmount = document.getElementById('buyAmount');
+const buyQtyPreview = document.getElementById('buyQtyPreview');
+const buyConfirm = document.getElementById('buyConfirm');
+
+function populateCoinSelect(){
+  const cryptoOptions = topCoinIds.map(id => {
+    const c = coinsData[id];
+    const label = c ? `${c.symbol.toUpperCase()} — ${c.name} (R$ ${fmtPrice(c.current_price)})` : id;
+    return `<option value="${id}">${label}</option>`;
+  }).join('');
+
+  const stockOptions = stockIds.map(id => {
+    const c = coinsData[id];
+    const label = c ? `${c.symbol} — ${c.name} (R$ ${fmtPrice(c.current_price)})` : id;
+    return `<option value="${id}">${label}</option>`;
+  }).join('');
+
+  buyCoinSelect.innerHTML =
+    `<optgroup label="Criptomoedas">${cryptoOptions}</optgroup>` +
+    (stockOptions ? `<optgroup label="Ações">${stockOptions}</optgroup>` : '');
+}
+
+function updateBuyPreview(){
+  const id = buyCoinSelect.value;
+  const c = coinsData[id];
+  const val = parseFloat(buyAmount.value);
+  if(!c || !val || val <= 0){
+    buyQtyPreview.textContent = '—';
+    buyConfirm.disabled = true;
+    return;
+  }
+  const qty = val / c.current_price;
+  buyQtyPreview.textContent = `${qty.toLocaleString('pt-BR', {maximumFractionDigits:6})} ${c.symbol.toUpperCase()}`;
+  buyConfirm.disabled = false;
+}
+
+function openBuyModal(preselectId){
+  populateCoinSelect();
+  if(preselectId) buyCoinSelect.value = preselectId;
+  buyAmount.value = '';
+  updateBuyPreview();
+  buyOverlay.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeBuyModal(){
+  buyOverlay.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('fabInvest').addEventListener('click', () => openBuyModal());
+document.getElementById('buyClose').addEventListener('click', closeBuyModal);
+buyOverlay.addEventListener('click', (e) => { if(e.target === buyOverlay) closeBuyModal(); });
+
+buyCoinSelect.addEventListener('change', updateBuyPreview);
+buyAmount.addEventListener('input', updateBuyPreview);
+
+document.querySelectorAll('.quick-amounts button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    buyAmount.value = btn.dataset.val;
+    updateBuyPreview();
+  });
+});
+
+buyConfirm.addEventListener('click', () => {
+  const id = buyCoinSelect.value;
+  const c = coinsData[id];
+  const val = parseFloat(buyAmount.value);
+  if(!c || !val || val <= 0) return;
+
+  const qty = val / c.current_price;
+  if(!portfolio[id]) portfolio[id] = {qty:0, invested:0, since:Date.now()};
+  portfolio[id].qty += qty;
+  portfolio[id].invested += val;
+  savePortfolio(portfolio);
+
+  closeBuyModal();
+  tabCarteira.click();
+});
+
+document.getElementById('investFromChart').addEventListener('click', () => {
+  const id = activeCoinId;
+  closeModal();
+  openBuyModal(id);
+});
+
+// keep the "invest in this coin" button label in sync when opening the chart
+const _origOpenModal = openModal;
+openModal = function(id){
+  _origOpenModal(id);
+  const c = coinsData[id];
+  document.getElementById('investFromChartSym').textContent = c ? c.symbol.toUpperCase() : '';
+};
+
+</script>
+</body>
+</html>
