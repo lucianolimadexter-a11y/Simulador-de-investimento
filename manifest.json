@@ -1,0 +1,16 @@
+{
+  "name": "Radar Cripto · Simulador",
+  "short_name": "Radar Cripto",
+  "description": "Painel de criptomoedas e ações em tempo real, com carteira virtual simulada, sem dinheiro real.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0A0B0D",
+  "theme_color": "#0A0B0D",
+  "orientation": "portrait",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
